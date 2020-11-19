@@ -206,3 +206,216 @@ void makeBlueToothConnection()
     } while (0 == connectOK);
 
 }
+
+//slave part code
+#include <SoftwareSerial.h>
+#include <Servo.h>
+#define RxD 7
+#define TxD 6
+#define ConnStatus A1
+#define DEBUG_ENABLED  1
+int shieldPairNumber = 5;
+boolean ConnStatusSupported = true;
+String slaveNameCmd = "\r\n+STNA=Slave";
+SoftwareSerial blueToothSerial(RxD,TxD);
+int VRx = 0;
+int VRy = 0;
+int SW = 0;
+bool isManual = true;
+Servo servoLeft;
+Servo servoRight;
+void setup()
+{
+
+    pinMode(A4, OUTPUT);
+  pinMode(A5, INPUT);
+
+
+  pinMode(A0, OUTPUT);
+  pinMode(A1, INPUT);
+
+
+  pinMode(A2, OUTPUT);
+  pinMode(A3, INPUT);
+
+    servoLeft.attach(13);
+    servoRight.attach(12);
+    Serial.begin(9600);
+    blueToothSerial.begin(38400);
+
+    pinMode(RxD, INPUT);
+    pinMode(TxD, OUTPUT);
+    pinMode(ConnStatus, INPUT);
+
+
+
+    if(ConnStatusSupported) Serial.println("Checking Slave-Master connection status.");
+
+    if(ConnStatusSupported && digitalRead(ConnStatus)==1)
+    {
+        Serial.println("Already connected to Master - remove USB cable if reboot of Master Bluetooth required.");
+    }
+    else
+    {
+        Serial.println("Not connected to Master.");
+
+        setupBlueToothConnection();
+
+        delay(1000);
+        Serial.flush();
+        blueToothSerial.flush();
+    }
+}
+
+
+void loop()
+{
+    char recvChar;
+
+    while(1)
+    {
+        if(blueToothSerial.available())
+        {
+            recvChar = blueToothSerial.read();
+            Serial.println(recvChar);
+            if (recvChar == 'M') {
+                changeDriveMode();
+            }
+            if (isManual) {
+                manualDriveHandler(recvChar);
+            } else {
+                autoDriveHandler();
+            }
+        }
+    }
+}
+
+void changeDriveMode () {
+    if (isManual) {
+        isManual = false;
+    } else if (!isManual) {
+        isManual = true;
+    }
+}
+
+void manualDriveHandler(char input) {
+    if (input == 'F') {
+
+        servoLeft.writeMicroseconds(1700);
+        servoRight.writeMicroseconds(1300);
+    } else if (input == 'B') {
+
+        servoLeft.writeMicroseconds(1300);
+        servoRight.writeMicroseconds(1700);
+    } else if (input == 'L') {
+
+        servoLeft.writeMicroseconds(1300);
+        servoRight.writeMicroseconds(1300);
+    } else if (input == 'R') {
+
+        servoLeft.writeMicroseconds(1700);
+        servoRight.writeMicroseconds(1700);
+    } else {
+        servoLeft.writeMicroseconds(1500);
+        servoRight.writeMicroseconds(1500);
+    }
+}
+
+void autoDriveHandler() {
+  if (!readFrontSensor()) {
+            servoLeft.writeMicroseconds(1700);
+        servoRight.writeMicroseconds(1300);
+  }
+    else
+  {
+    decideDirection();
+        servoLeft.writeMicroseconds(1500);
+        servoRight.writeMicroseconds(1500);
+  }
+}
+
+
+void setupBlueToothConnection()
+{
+    Serial.println("Setting up the local (slave) Bluetooth module.");
+
+    slaveNameCmd += shieldPairNumber;
+    slaveNameCmd += "\r\n";
+
+    blueToothSerial.print("\r\n+STWMOD=0\r\n");
+    blueToothSerial.print(slaveNameCmd);
+    blueToothSerial.print("\r\n+STAUTO=0\r\n");
+    blueToothSerial.print("\r\n+STOAUT=1\r\n");
+
+
+
+    blueToothSerial.flush();
+    delay(2000);
+
+    blueToothSerial.print("\r\n+INQ=1\r\n");
+
+    blueToothSerial.flush();
+    delay(2000);
+
+    Serial.println("The slave bluetooth is inquirable!");
+}
+
+
+
+
+
+
+boolean readFrontSensor() {
+  long duration, cm;
+  digitalWrite(A4, LOW);
+  delayMicroseconds(5);
+  digitalWrite(A4, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(A4, LOW);
+
+
+  pinMode(A5, INPUT);
+  duration = pulseIn(A5, HIGH);
+
+  cm = (duration/2) / 29.1;
+
+  if (cm < 15) {
+    return true;
+  }
+  return false;
+}
+
+
+
+void decideDirection() {
+        long rduration, rcm;
+    digitalWrite(A0, LOW);
+    delayMicroseconds(5);
+    digitalWrite(A0, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(A0, LOW);
+    pinMode(A1, INPUT);
+    rduration = pulseIn(A1, HIGH);
+    rcm = (rduration/2) / 29.1;
+
+    long lduration, lcm;
+    digitalWrite(A2, LOW);
+    delayMicroseconds(5);
+    digitalWrite(A2, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(A2, LOW);
+    pinMode(A3, INPUT);
+    lduration = pulseIn(A3, HIGH);
+    lcm = (lduration/2) / 29.1;     
+
+    if (lcm > rcm) {
+        servoLeft.writeMicroseconds(1300);
+        servoRight.writeMicroseconds(1300);
+    } else {
+              servoLeft.writeMicroseconds(1700);
+        servoRight.writeMicroseconds(1700);
+      }
+      delay(1000);
+
+}
+
