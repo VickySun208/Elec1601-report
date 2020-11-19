@@ -1,27 +1,15 @@
 # Elec1601-report
 int shieldPairNumber = 5;
-
-
-
 boolean ConnStatusSupported = true;
-
-
-
-
-
 String slaveName = "Slave";
 String masterNameCmd = "\r\n+STNA=Master";
 String connectCmd = "\r\n+CONN=";
-
 int nameIndex = 0;
 int addrIndex = 0;
-
 String recvBuf;
 String slaveAddr;
-String retSymb = "+RTINQ=";   // Start symble when there's any return
-
+String retSymb = "+RTINQ=";   
 SoftwareSerial blueToothSerial(RxD,TxD);
-
 //JoyStick setup
 const int VRxPin = A0;
 const int VRyPin = A1;
@@ -29,7 +17,6 @@ const int SWPin = 2;
 int VRx = 0;
 int VRy = 0;
 int SW = 0;
-
 void setup()
 {
 
@@ -138,7 +125,7 @@ void getSlaveAddress()
     Serial.print("Searching for address of slave: ");
     Serial.println(slaveName);
 
-    slaveName = ";" + slaveName;   // The ';' must be included for the search that follows
+    slaveName = ";" + slaveName;   
 
     char recvChar;
 
@@ -151,7 +138,7 @@ void getSlaveAddress()
             recvChar = blueToothSerial.read();
             recvBuf += recvChar;
 
-            nameIndex = recvBuf.indexOf(slaveName);   // Get the position of slave name
+            nameIndex = recvBuf.indexOf(slaveName);   
 
             if ( nameIndex != -1 )   // ie. if slaveName was found
             {
